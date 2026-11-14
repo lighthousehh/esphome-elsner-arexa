@@ -23,7 +23,7 @@ It needs ESPHome's `cc1101` component (ESPHome 2026.10 or newer).
 
 ```yaml
 external_components:
-  - source: github://dbuezas/esphome-elsner-arexa
+  - source: github://lighthousehh/esphome-elsner-arexa@main
     components: [elsner_remo]
 
 cc1101:
@@ -122,6 +122,61 @@ lacks the inside temperature, which only the RC measures.)
 a second. The RC sleeps between its packets, so it does not see the new counter; it learns it from the station's
 answer, and the next exchange is fine.
 
+## Remo pro: elsner_remo_replay
+
+`elsner_remo_replay` sends frames that were recorded from a Remo pro, with the same CC1101 and radio setup as
+`elsner_remo`. It controls receivers that are paired to a Remo pro (tested with an RF-L LED-ST dimmer and an
+RF-MSG-ST awning receiver) without pairing them again: the receivers see the recorded frames as if they came from
+the Remo pro. It does not decode or build frames itself. A frame sent this way is only valid for a receiver that
+takes its counter (see Counter), so record your own and do not copy the ones from the examples.
+
+**Recording the frames:** with `elsner_remo` in your YAML, press a button on the Remo pro (a short tap, or hold and
+release) and copy the frames from the `last_frame` text sensor (`Letzter Rahmen`): each one is 38 bytes = 76 hex
+digits (without the `ok -61` in front). A tap is two frames (press, release). Hold-and-release is three
+(press, hold, end). The channel of the Remo pro is in byte 19 of the descrambled packet (`08` for the light, `0c` for the
+awning on my system); the command codes are the same for all channels.
+
+```yaml
+external_components:
+  - source: github://lighthousehh/esphome-elsner-arexa@main
+    components: [elsner_remo, elsner_remo_replay]
+
+elsner_remo:
+  id: remo
+  cc1101_id: radio_arexa
+
+elsner_remo_replay:
+  id: replay
+  cc1101_id: radio_arexa
+  elsner_remo_id: remo
+  # output_power: 11
+
+button:
+  - platform: elsner_remo_replay
+    id: markise_auf_kurz
+    name: Markise Auf kurz
+    gap: 70ms                 # time between the frames
+    frames:
+      - <76 hex digits>       # press
+      - <76 hex digits>       # release
+    # copies: 3               # each frame is sent 3 times, 30 ms apart
+```
+
+| Platform | Keys |
+|---|---|
+| `button` | `frames` (a list of recorded frames), `gap` (default `100ms`), `copies` (default 3) |
+| `output` | `switch_on`, `switch_off` (2 frames each), `dim_up`, `dim_down` (3 frames each), `dim_time` (default `4s`: the time from the darkest to the brightest), `hold_delay` (default `1000ms`), `copies` |
+
+The `output` is a dimmer for a `monochromatic` light. It sets the brightness the way the Remo pro does it: a press frame,
+the dim frame after `hold_delay`, and the end frame after the time needed for the change. The receiver reports nothing, so
+the level is an estimate: it goes to the bottom or the top when 0 to 5 % or 99 to 100 % is asked, which brings it back
+in line.
+
+**Awning:** a `time_based` cover that presses the `Auf fahren` and `Ab fahren` buttons works well. The awning has no
+stop command; a short tap of the opposite direction stops it. The cover has to send that tap only between the end
+positions, otherwise it moves the awning a little after every full run. A complete example with a light and an awning
+is in [examples/wintergarten-komplett.yaml](examples/wintergarten-komplett.yaml).
+
 ## Accuracy
 
 The value scales come from my own RC display readings, so they are a first fit:
@@ -143,6 +198,7 @@ recordings in rtl_433_tests (the same commands, and its sensor packet differs on
 buttons may work there too. rtl_433's decoder describes the same scrambling differently (a bit transform plus a
 "rolling state"); its `spread_k(seed)` is the seed part of the running sum here. Other Elsner RF devices (Solexa
 II, Solexa Home, WS1, Remo remotes, RF-MSG-ST) use "Elsner RF" at 868.2 MHz too; I found no public decoding of them.
+The Remo pro, the RF-L LED-ST and the RF-MSG-ST can be controlled with recorded frames (see "Remo pro: elsner_remo_replay").
 
 Receiving: the chip decodes the Manchester itself, synced on the first two frame bytes `ce ad` (the preamble is
 too short to fix the chip phase; the sync word does). The 36 bytes after it, with the CRC, fit the 64-byte FIFO.
