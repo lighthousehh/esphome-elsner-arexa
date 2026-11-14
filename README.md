@@ -23,7 +23,7 @@ It needs ESPHome's `cc1101` component (ESPHome 2026.10 or newer).
 
 ```yaml
 external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@main
+  - source: github://lighthousehh/esphome-elsner-remo@main
     components: [elsner_remo, elsner_remo_replay]
 
 cc1101:
@@ -75,7 +75,7 @@ cover:
 
 Every `<frame>` is a frame recorded from the Remo pro: 38 bytes = 76 hex digits, as the `last_frame` text sensor shows it
 (without the `ok -61` in front). The full example with light and awning is in
-[examples/wintergarten-komplett.yaml](https://github.com/lighthousehh/esphome-elsner-arexa/blob/main/examples/wintergarten-komplett.yaml).
+[examples/wintergarten-komplett.yaml](https://github.com/lighthousehh/esphome-elsner-remo/blob/main/examples/wintergarten-komplett.yaml).
 
 | Platform | Component | Keys |
 |---|---|---|
