@@ -109,134 +109,31 @@ in line.
 stop command; a short tap of the opposite direction stops it. The cover has to send that tap only between the end
 positions, otherwise it moves the awning a little after every full run.
 
-## Arexa window control (elsner_remo)
+## Radio and sending
 
-An ESPHome component for the **Elsner Arexa** window control (Arexa 230 V: a battery RC handset and a weather
-station that drives the window motor). With a CC1101 868 MHz module it gives you in Home Assistant:
+**Frequency:** cheap CC1101 modules are often 20 to 40 kHz off. The default is 868.19 MHz (`frequency` of `elsner_remo`;
+allowed are 867.9 to 868.5 MHz). If a receiver does not react, try steps of 10 kHz between 868.15 and 868.24 MHz: in the
+original project one module needed 868.227 MHz to come out at 868.19 MHz. The `rc_rssi` sensor and the `last_frame` text sensor show
+whether packets arrive.
 
-- **Buttons:** open, stop, close, automatic mode, manual mode. They work like the RC's own buttons.
-- **A switch** for automatic mode.
-- **Sensors:** inside temperature (from the RC), outside temperature, wind, brightness, rain alarm, rain sensor,
-  automatic or manual mode.
-- **An event** for every press on the real RC.
-- **The window's state** (open or closed), worked out from the commands, the alarms and the RC's automatic settings.
+**Sending:** a button press or a dimmer change puts its frames into a queue: frame number i goes out i times `gap` after the
+press, each one as `copies` copies 30 ms apart. A new press adds its frames to the queue. `output_power` of
+`elsner_remo_replay` (default 11 dBm, from -30 to 11) sets the transmit power. After every frame the radio goes back into
+receive mode.
 
-Nothing has to be opened or re-paired: the component listens to your RC for up to a minute and then speaks with
-its system ID and addresses. The RC keeps working as before.
-
-```yaml
-external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@main
-    components: [elsner_remo]
-
-cc1101:
-  - id: radio_arexa
-    cs_pin: D8
-    gdo0_pin: D2
-    packet_mode: true    # needed: elsner_remo sets all other radio settings itself
-    packet_length: 64    # any value: elsner_remo sets its own
-
-elsner_remo:
-  cc1101_id: radio_arexa
-  # frequency: 868.19MHz   # 868.19 MHz + your module's crystal error, see below
-  # output_power: 11
-
-button:
-  - platform: elsner_remo
-    open: { name: Arexa Open }
-    stop: { name: Arexa Stop }
-    close: { name: Arexa Close }
-    auto: { name: Arexa Auto }
-    manual: { name: Arexa Manual }
-```
-
-The full example with all sensors is in [examples/elsner-arexa.yaml](examples/elsner-arexa.yaml).
-
-| Platform | Keys |
-|---|---|
-| `sensor` | `inside_temperature`, `outside_temperature`, `wind`, `brightness`, `rain_sensor`, `rc_rssi`, `station_rssi`, `rc_freq_offset`, `station_freq_offset`, and `raw_inside`, `raw_outside`, `raw_brightness` (for calibration) |
-| `binary_sensor` | `rain` (the station's rain alarm), `wind_alarm`, `auto_mode` (on in automatic mode) |
-| `switch` | `auto_mode` (on: automatic, off: manual; it shows the station's mode) |
-| `button` | `open`, `stop`, `close`, `auto`, `manual` |
-| `event` | `remote` (event types `open`, `stop`, `close`, `auto`, `manual`; one event per press: the RC's repeats have the same counter) |
-| `text_sensor` | `pairing`: the pairing of the RC heard on the air; `station_raw`: the station's value bytes 17..35 (for working out new values); `last_command`: the result of the last command sent (see below); `last_frame`: every Arexa frame as received and every frame sent, raw (`ok -62 cead93...`, `repaired`, `bad` for a wrong CRC, `tx`), so the history keeps them all; `window`: `open` or `closed` (see Window state) |
-
-**Pairing:** by default (`pairing: auto`) the component learns your RC's system ID and the RC's and
-the station's addresses from the first RC status packet. The `pairing` text sensor shows what arrives, as 20 hex
-digits (bytes 8 to 16 of the RC's packets: the system ID, the RC's address, the station's address and the device
-types, then the counter's check byte). After that, only packets with this system ID (bytes 8, 9 and 13, 14) count, so a neighbour's Arexa does
-not feed its weather into the sensors or move the counter. To skip the learning, put that value into the hub, for example `pairing: 1a2b3c4d5e1a2b6f7048` (made up: use
-yours; the system ID, digits 1..4, must come again in digits 11..14, which catches most typos). Then the buttons work right after a start, even without the RC
-(see After a restart).
-
-**Frequency:** cheap CC1101 modules are often 20 to 40 kHz off. Mine needs `frequency: 868.227MHz` to come out at
-868.19 MHz. If the buttons do nothing or only the RC's packets come in, try steps of 10 kHz between 868.15 and
-868.24 MHz. The `rc_rssi` / `station_rssi` sensors and the log (`Learned my RC: ...`) show whether packets arrive.
+**No confirmation:** the receivers do not answer, so the ESP cannot tell whether a command arrived. You see it on the light
+or the awning. The light level and the awning position are estimates (the dimmer from `dim_time`, the awning from the travel
+times of the `time_based` cover); a full run to an end position brings them back in line. If the light or the awning is
+moved some other way (with the Remo pro, by hand), the value in Home Assistant is wrong until the next full run.
 
 **Sharing the radio:** if something else uses the same CC1101 (for example a `remote_transmitter` in OOK mode), call
-`id(<your elsner_remo id>).start_listening();` after it, to put the radio back into Arexa mode.
+`id(remo).start_listening();` after it (use the id of your `elsner_remo`), to put the radio back into receive mode.
 
-**Sending and its result:** a command goes out as 3 copies 30 ms apart. The station answers the first copy it
-hears, 14 ms later, with the command's counter. Without that answer, I send again with a new counter every 300 ms,
-at most 4 times. If none of them is answered, my counter may be behind the station's: I announce a new counter
-block (a resync, see Protocol) and then send the command again, 4 more times at most. The station answers with its state from before the command, so a mode command needs one more
-send (it counts as done when an answer shows the new mode), and so do open, close and stop in automatic mode (they
-switch the station to manual: the second answer shows it). A damaged answer (the CRC does not match; a single wrong
-bit is repaired) also means one more send. The `last_command` text sensor shows the result, so an automation can alert:
-`stop: confirmed`, `stop: no answer after 4 sends`, `stop: no answer to a resync`, `auto: mode unchanged after 4 sends`,
-`stop: not sent, pairing not known yet`, `stop: not sent, no packet heard yet` (a fixed pairing without the check byte), or `open: replaced by stop` (a new command stops the one being sent). Failures
-are also logged as warnings.
+## Arexa window control
 
-**Open, Stop and Close end automatic mode**, like on the RC: the station switches to manual (seen with Stop). The
-station closes the window on rain in both modes; automatic mode adds opening and closing by temperature.
-
-**Window state:** nothing reports the window's position, so the `window` text sensor works it out the way the
-station acts (the Arexa manual, "Einstellung der Automatik"). Put the RC's automatic settings into the hub (they are
-shown and changed on the RC: hold SET for 3 s; the component can't read them):
-
-```yaml
-elsner_remo:
-  cc1101_id: radio_arexa
-  # copy them from the RC: hold SET for 3 s while it shows the temperatures or the weather values (SET steps through them)
-  settings:              # the factory values; off switches one off, as on the RC
-    open_above: 25°C     # A. open above this inside temperature (the RC's), close 2 °C below it
-    outside_lock: 5°C    # B. below this outside temperature: closed, until 2 °C above it
-    wind_alarm: 4 m/s    # C. above this wind: closed, held 5 minutes
-    rain_alarm: true     # D. rain: closed
-  travel_time: 40s       # open to closed (a stop within it after a close leaves the window partly open)
-```
-
-- Open and close (from Home Assistant or the RC, once the station took them) set it; a stop within `travel_time`
-  after a close means partly open, so `open`. They also switch the station to manual mode.
-- A wind or rain alarm closes the window in both modes, and the station ignores the buttons until it ends.
-- In automatic mode, settings A and B decide. Between their two limits (or with A off) the window stays as it was.
-- The state survives a restart of the ESP. Until the first command or decision after a first start it is unknown.
-
-It is an estimate: the station measures the wind every few seconds but sends it once a minute, so a short gust can
-close the window unseen; and if the window is moved some other way (by hand, a power cut), it is wrong until the
-next command.
-
-**After a restart** the buttons work once the pairing is known: learned from an RC status packet (the RC sends one
-every minute), or fixed in the configuration. Without a counter heard yet, a command starts with a resync, so with a
-fixed `pairing` (all 20 digits) the buttons also work without the RC, for example to replace a broken one. (Automatic mode then
-lacks the inside temperature, which only the RC measures.)
-
-**"err" on the RC display:** right after a command from Home Assistant, the RC's next exchange can show "err" for
-a second. The RC sleeps between its packets, so it does not see the new counter; it learns it from the station's
-answer, and the next exchange is fine.
-
-## Accuracy
-
-The value scales come from my own RC display readings, so they are a first fit:
-
-| Value | Formula | Based on |
-|---|---|---|
-| inside temperature | bytes 22, 23 (see Protocol) | the RC cooled in a freezer and warmed up: every display step from -1 to 13 °C, plus 20 to 25 °C; a thermometer next to the RC agrees within 0.1 °C |
-| outside temperature | bytes 17, 18 (see Protocol) | 30 readings, 7 to 11 °C; seen down to -0.7 °C |
-| brightness | bytes 22, 23 (see Protocol), × 1.05 lx | 5 readings from 0 to 6.5 klux (the RC shows whole klux) |
-| wind | bytes 19, 20 (see Protocol) | 3 readings: 0, 1 and 2 m/s (the RC shows whole m/s) |
-
-If you have more pairs (RC display, the `raw_*` sensors), please open an issue.
+The component `elsner_remo` also contains the Elsner Arexa window control (buttons, weather sensors and the window's state) of
+the original project. It is documented in the [original README](https://github.com/dbuezas/esphome-elsner-arexa#readme); there it is
+called `elsner_arexa`, here `elsner_remo`. An example is in [examples/elsner-arexa.yaml](examples/elsner-arexa.yaml).
 
 ## How it works
 
