@@ -1,8 +1,115 @@
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/dbuezas)
+Post in HA forum (original project): https://community.home-assistant.io/t/elsner-arexa-solexa-868-mhz-radio-in-home-assistant-with-esphome-cc1101
 
-Post in HA forum: https://community.home-assistant.io/t/elsner-arexa-solexa-868-mhz-radio-in-home-assistant-with-esphome-cc1101
+# Elsner Connect with Remo pro: conservatory control for LED light and awning
 
-# esphome-elsner-arexa
+An ESPHome component set that controls a conservatory (Wintergarten) from Home Assistant through an Elsner **Remo pro**:
+an **RF-L LED-ST** dimmer for the LED light and an **RF-MSG-ST** receiver for the awning (Markise). With an ESP32 and a
+CC1101 868 MHz module it gives you in Home Assistant:
+
+- **A dimmable light** for the LED dimmer: on, off and brightness, set the way the Remo pro does it.
+- **An awning cover** with position, open, close and stop (travel times are set in the YAML).
+- **Buttons** for short steps and full runs of the awning (up and down).
+- **Diagnostics:** the radio level of the Remo pro and a text sensor with every frame received and sent, to record new frames.
+
+Nothing has to be opened or re-paired: the receivers stay paired to your Remo pro, and the ESP only sends frames that
+were recorded from it. The Remo pro keeps working as before.
+
+It is based on [dbuezas/esphome-elsner-arexa](https://github.com/dbuezas/esphome-elsner-arexa) (the radio and the protocol for the
+Elsner Arexa window control), which is still included as `elsner_remo`.
+
+## Setup
+
+It needs ESPHome's `cc1101` component (ESPHome 2026.10 or newer).
+
+```yaml
+external_components:
+  - source: github://lighthousehh/esphome-elsner-arexa@main
+    components: [elsner_remo, elsner_remo_replay]
+
+cc1101:
+  - id: radio_arexa
+    cs_pin: GPIO5
+    gdo0_pin: GPIO4
+    packet_mode: true    # needed: elsner_remo sets all other radio settings itself
+    packet_length: 64    # any value: elsner_remo sets its own
+
+elsner_remo:
+  id: remo
+  cc1101_id: radio_arexa
+  # frequency: 868.19MHz   # 868.19 MHz + your module's crystal error
+
+elsner_remo_replay:
+  id: replay
+  cc1101_id: radio_arexa
+  elsner_remo_id: remo
+
+output:
+  - platform: elsner_remo_replay
+    id: dimmer_out
+    dim_time: 4s
+    switch_on: [<frame>, <frame>]
+    switch_off: [<frame>, <frame>]
+    dim_up: [<frame>, <frame>, <frame>]
+    dim_down: [<frame>, <frame>, <frame>]
+
+light:
+  - platform: monochromatic
+    name: Wintergarten Licht
+    output: dimmer_out
+
+button:
+  - platform: elsner_remo_replay
+    id: markise_auf_fahren
+    name: Markise Auf fahren
+    gap: 1000ms
+    frames: [<frame>, <frame>, <frame>]
+  # more buttons: Auf kurz, Ab kurz, Ab fahren
+
+cover:
+  - platform: time_based
+    name: Markise
+    open_duration: 21.80s
+    close_duration: 22.11s
+    # open_action, close_action, stop_action: see the full example
+```
+
+Every `<frame>` is a frame recorded from the Remo pro: 38 bytes = 76 hex digits, as the `last_frame` text sensor shows it
+(without the `ok -61` in front). The full example with light and awning is in
+[examples/wintergarten-komplett.yaml](https://github.com/lighthousehh/esphome-elsner-arexa/blob/main/examples/wintergarten-komplett.yaml).
+
+| Platform | Component | Keys |
+|---|---|---|
+| `output` | `elsner_remo_replay` | `switch_on`, `switch_off`, `dim_up`, `dim_down`, `dim_time`, `hold_delay`, `copies` |
+| `button` | `elsner_remo_replay` | `frames`, `gap`, `copies` |
+| `sensor` | `elsner_remo` | `rc_rssi` (radio level of the Remo pro), `rc_freq_offset` |
+| `text_sensor` | `elsner_remo` | `pairing`, `last_frame`: every frame received and sent, raw, to record new ones |
+
+## Remo pro: elsner_remo_replay
+
+`elsner_remo_replay` sends frames that were recorded from a Remo pro, with the same CC1101 and radio setup as
+`elsner_remo`. It controls receivers that are paired to a Remo pro (tested with an RF-L LED-ST dimmer and an
+RF-MSG-ST awning receiver) without pairing them again. It does not decode or build frames itself. A frame sent this way is
+only valid for a receiver that takes its counter (see Counter), so record your own and do not copy the ones from the examples.
+
+**Recording the frames:** with `elsner_remo` in your YAML, press a button on the Remo pro (a short tap, or hold and
+release) and copy the frames from the `last_frame` text sensor (`Letzter Rahmen`): each one is 38 bytes = 76 hex
+digits (without the `ok -61` in front). A tap is two frames (press, release). Hold-and-release is three
+(press, hold, end). The channel of the Remo pro is in byte 19 of the descrambled packet (`08` for the light, `0c` for the
+awning on my system); the command codes are the same for all channels.
+
+Defaults: `gap` `100ms`, `copies` 3 (each frame is sent 3 times, 30 ms apart), `dim_time` `4s` (the time from the darkest to
+the brightest), `hold_delay` `1000ms`.
+
+**Dimmer:** the `output` is for a `monochromatic` light. It sets the brightness the way the Remo pro does it: a press frame,
+the dim frame after `hold_delay`, and the end frame after the time needed for the change. The receiver reports nothing, so
+the level is an estimate: it goes to the bottom or the top when 0 to 5 % or 99 to 100 % is asked, which brings it back
+in line.
+
+**Awning:** a `time_based` cover that presses the `Auf fahren` and `Ab fahren` buttons works well. The awning has no
+stop command; a short tap of the opposite direction stops it. The cover has to send that tap only between the end
+positions, otherwise it moves the awning a little after every full run.
+
+## Arexa window control (elsner_remo)
 
 An ESPHome component for the **Elsner Arexa** window control (Arexa 230 V: a battery RC handset and a weather
 station that drives the window motor). With a CC1101 868 MHz module it gives you in Home Assistant:
@@ -16,10 +123,6 @@ station that drives the window motor). With a CC1101 868 MHz module it gives you
 
 Nothing has to be opened or re-paired: the component listens to your RC for up to a minute and then speaks with
 its system ID and addresses. The RC keeps working as before.
-
-## Setup
-
-It needs ESPHome's `cc1101` component (ESPHome 2026.10 or newer).
 
 ```yaml
 external_components:
@@ -121,61 +224,6 @@ lacks the inside temperature, which only the RC measures.)
 **"err" on the RC display:** right after a command from Home Assistant, the RC's next exchange can show "err" for
 a second. The RC sleeps between its packets, so it does not see the new counter; it learns it from the station's
 answer, and the next exchange is fine.
-
-## Remo pro: elsner_remo_replay
-
-`elsner_remo_replay` sends frames that were recorded from a Remo pro, with the same CC1101 and radio setup as
-`elsner_remo`. It controls receivers that are paired to a Remo pro (tested with an RF-L LED-ST dimmer and an
-RF-MSG-ST awning receiver) without pairing them again: the receivers see the recorded frames as if they came from
-the Remo pro. It does not decode or build frames itself. A frame sent this way is only valid for a receiver that
-takes its counter (see Counter), so record your own and do not copy the ones from the examples.
-
-**Recording the frames:** with `elsner_remo` in your YAML, press a button on the Remo pro (a short tap, or hold and
-release) and copy the frames from the `last_frame` text sensor (`Letzter Rahmen`): each one is 38 bytes = 76 hex
-digits (without the `ok -61` in front). A tap is two frames (press, release). Hold-and-release is three
-(press, hold, end). The channel of the Remo pro is in byte 19 of the descrambled packet (`08` for the light, `0c` for the
-awning on my system); the command codes are the same for all channels.
-
-```yaml
-external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@main
-    components: [elsner_remo, elsner_remo_replay]
-
-elsner_remo:
-  id: remo
-  cc1101_id: radio_arexa
-
-elsner_remo_replay:
-  id: replay
-  cc1101_id: radio_arexa
-  elsner_remo_id: remo
-  # output_power: 11
-
-button:
-  - platform: elsner_remo_replay
-    id: markise_auf_kurz
-    name: Markise Auf kurz
-    gap: 70ms                 # time between the frames
-    frames:
-      - <76 hex digits>       # press
-      - <76 hex digits>       # release
-    # copies: 3               # each frame is sent 3 times, 30 ms apart
-```
-
-| Platform | Keys |
-|---|---|
-| `button` | `frames` (a list of recorded frames), `gap` (default `100ms`), `copies` (default 3) |
-| `output` | `switch_on`, `switch_off` (2 frames each), `dim_up`, `dim_down` (3 frames each), `dim_time` (default `4s`: the time from the darkest to the brightest), `hold_delay` (default `1000ms`), `copies` |
-
-The `output` is a dimmer for a `monochromatic` light. It sets the brightness the way the Remo pro does it: a press frame,
-the dim frame after `hold_delay`, and the end frame after the time needed for the change. The receiver reports nothing, so
-the level is an estimate: it goes to the bottom or the top when 0 to 5 % or 99 to 100 % is asked, which brings it back
-in line.
-
-**Awning:** a `time_based` cover that presses the `Auf fahren` and `Ab fahren` buttons works well. The awning has no
-stop command; a short tap of the opposite direction stops it. The cover has to send that tap only between the end
-positions, otherwise it moves the awning a little after every full run. A complete example with a light and an awning
-is in [examples/wintergarten-komplett.yaml](examples/wintergarten-komplett.yaml).
 
 ## Accuracy
 
