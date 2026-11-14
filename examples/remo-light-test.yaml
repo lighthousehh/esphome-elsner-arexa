@@ -1,0 +1,97 @@
+# Test: sends frames recorded from a Remo pro to an RF-L LED-ST dimmer (ESP32 + CC1101 868 MHz).
+# Wiring: CC1101 SCK -> GPIO18, MISO -> GPIO19, MOSI -> GPIO23, CSN -> GPIO5, GDO0 -> GPIO4, VCC -> 3.3 V, GND -> GND.
+#
+# The frames are the 'Letzter Rahmen' values of elsner_arexa (without 'ok -61 '). Counters of the recorded frames:
+#   ein:    b3 (counter 00ff), 93 (00f8)             aus:    c4 (00fb), a4 (00f8)
+#   heller: b3 (00d9), b8 (00d8), 98 (00d1)          dunkler: c4 (00f4), ba (00f3), 9a (00ef)
+# The dimmer may ignore old counters: then nothing happens, which is also a result.
+
+esphome:
+  name: wintergarten
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+  level: DEBUG
+api:
+ota:
+  - platform: esphome
+
+external_components:
+  - source: github://lighthousehh/esphome-elsner-arexa@remo-light-test
+    components: [elsner_arexa, elsner_replay]
+
+spi:
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
+
+cc1101:
+  - id: radio_arexa
+    cs_pin: GPIO5
+    gdo0_pin: GPIO4
+    packet_mode: true
+    packet_length: 64
+
+elsner_arexa:
+  id: arexa
+  cc1101_id: radio_arexa
+  # frequency: 868.19MHz  # 868.19 MHz + your module's error (cheap modules: +-40 kHz)
+
+elsner_replay:
+  id: replay
+  cc1101_id: radio_arexa
+  elsner_arexa_id: arexa
+
+sensor:
+  - platform: elsner_arexa
+    rc_rssi:
+      name: Funk Pegel RC
+    rc_freq_offset:
+      name: Funk Frequenzabweichung
+
+text_sensor:
+  - platform: elsner_arexa
+    pairing:
+      name: Pairing
+    last_frame:
+      name: Letzter Rahmen
+
+button:
+  - platform: elsner_replay
+    name: Test Ein-Druck (nur b3)
+    frames:
+      - cead93ba5dbb771e6390db992d80ca4fa5cf493478f09b366bd6ac59b162c4870d1a33672f3e
+  - platform: elsner_replay
+    name: Test Licht Ein (Tippen)
+    gap: 70ms
+    frames:
+      - cead93ba5dbb771e6390db992d80ca4fa5cf493478f09b366bd6ac59b162c4870d1a33672f3e
+      - cead93bad7a85fee03d05b992e83cf58b7f372c79f3f2e5cb972e4c99223468d1b366cd89d2b
+  - platform: elsner_replay
+    name: Test Licht Aus (Tippen)
+    gap: 70ms
+    frames:
+      - cead93baecd4b08f44515c9a2f84d15dc107ca153a75c3870e1c376fddba74e8d1a24488f53a
+      - cead93bad7a85fee03d05b992e83cf58b7f383c79f3f2e5cb972e4c99223468d1b366cd876ba
+  - platform: elsner_replay
+    name: Test Heller (Halten)
+    gap: 1000ms
+    frames:
+      - cead93ba7acee8ff2411dc9a3087d86bdd3e27f1f2e5bf7ffefdf9f1e2c385091223468d44f8
+      - cead93ba06e5185fe491dc9a3086d666d32b07a65dba83060d1a3469d2a3478e1d3a73e5504e
+      - cead93ba7fd1ff2e83d05b992d80c94c9ec010f8000000000000fffefcf8efdebb76ebd639bf
+  - platform: elsner_replay
+    name: Test Dunkler (Halten)
+    gap: 1000ms
+    frames:
+      - cead93baa239883fa411dc9a2f85d462cb1af061d2a5902142850913264c983060c07ffe315a
+      - cead93ba69c7a77e2310db992d80c94da1c63f13376fb367cf9f3e7bf7edd9b163c78e1dd3a9
+      - cead93baca84287f2411dc9a2f84d25ec209a51e4d9acb952b55aa54a953a64c993365c9e9ac
