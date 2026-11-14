@@ -5,6 +5,7 @@ from esphome.const import CONF_ID, CONF_OUTPUT_POWER
 
 CODEOWNERS = ["@lighthousehh"]
 DEPENDENCIES = ["cc1101", "elsner_arexa"]
+AUTO_LOAD = ["output"]
 
 CONF_CC1101_ID = "cc1101_id"
 CONF_ELSNER_AREXA_ID = "elsner_arexa_id"
