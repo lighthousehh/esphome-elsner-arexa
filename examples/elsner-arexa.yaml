@@ -17,7 +17,7 @@ ota:
   - platform: esphome
 
 external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@main
+  - source: github://lighthousehh/esphome-elsner-remo@main
     components: [elsner_remo]
 
 spi:
