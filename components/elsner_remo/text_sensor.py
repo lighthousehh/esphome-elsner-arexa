@@ -3,9 +3,9 @@ from esphome.components import text_sensor
 import esphome.config_validation as cv
 from esphome.const import ENTITY_CATEGORY_DIAGNOSTIC
 
-from . import CONF_ELSNER_AREXA_ID, ElsnerArexa
+from . import CONF_ELSNER_REMO_ID, ElsnerRemo
 
-DEPENDENCIES = ["elsner_arexa"]
+DEPENDENCIES = ["elsner_remo"]
 
 CONF_PAIRING = "pairing"
 CONF_STATION_RAW = "station_raw"
@@ -15,7 +15,7 @@ CONF_WINDOW = "window"
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(CONF_ELSNER_AREXA_ID): cv.use_id(ElsnerArexa),
+        cv.GenerateID(CONF_ELSNER_REMO_ID): cv.use_id(ElsnerRemo),
         # the pairing of the RC heard on the air (20 hex digits); usable as `pairing:` in the hub
         cv.Optional(CONF_PAIRING): text_sensor.text_sensor_schema(
             icon="mdi:identifier", entity_category=ENTITY_CATEGORY_DIAGNOSTIC
@@ -40,7 +40,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_AREXA_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_ID])
     if CONF_PAIRING in config:
         t = await text_sensor.new_text_sensor(config[CONF_PAIRING])
         cg.add(hub.set_pairing_text_sensor(t))

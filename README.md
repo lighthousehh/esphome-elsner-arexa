@@ -24,22 +24,22 @@ It needs ESPHome's `cc1101` component (ESPHome 2026.10 or newer).
 ```yaml
 external_components:
   - source: github://dbuezas/esphome-elsner-arexa
-    components: [elsner_arexa]
+    components: [elsner_remo]
 
 cc1101:
   - id: radio_arexa
     cs_pin: D8
     gdo0_pin: D2
-    packet_mode: true    # needed: elsner_arexa sets all other radio settings itself
-    packet_length: 64    # any value: elsner_arexa sets its own
+    packet_mode: true    # needed: elsner_remo sets all other radio settings itself
+    packet_length: 64    # any value: elsner_remo sets its own
 
-elsner_arexa:
+elsner_remo:
   cc1101_id: radio_arexa
   # frequency: 868.19MHz   # 868.19 MHz + your module's crystal error, see below
   # output_power: 11
 
 button:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     open: { name: Arexa Open }
     stop: { name: Arexa Stop }
     close: { name: Arexa Close }
@@ -71,7 +71,7 @@ yours; the system ID, digits 1..4, must come again in digits 11..14, which catch
 868.24 MHz. The `rc_rssi` / `station_rssi` sensors and the log (`Learned my RC: ...`) show whether packets arrive.
 
 **Sharing the radio:** if something else uses the same CC1101 (for example a `remote_transmitter` in OOK mode), call
-`id(<your elsner_arexa id>).start_listening();` after it, to put the radio back into Arexa mode.
+`id(<your elsner_remo id>).start_listening();` after it, to put the radio back into Arexa mode.
 
 **Sending and its result:** a command goes out as 3 copies 30 ms apart. The station answers the first copy it
 hears, 14 ms later, with the command's counter. Without that answer, I send again with a new counter every 300 ms,
@@ -92,7 +92,7 @@ station acts (the Arexa manual, "Einstellung der Automatik"). Put the RC's autom
 shown and changed on the RC: hold SET for 3 s; the component can't read them):
 
 ```yaml
-elsner_arexa:
+elsner_remo:
   cc1101_id: radio_arexa
   # copy them from the RC: hold SET for 3 s while it shows the temperatures or the weather values (SET steps through them)
   settings:              # the factory values; off switches one off, as on the RC

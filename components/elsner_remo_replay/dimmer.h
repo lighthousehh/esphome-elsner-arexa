@@ -1,16 +1,16 @@
 #pragma once
 
-#include "elsner_replay.h"
+#include "elsner_remo_replay.h"
 #include "esphome/components/output/float_output.h"
 #include <vector>
 
-namespace esphome::elsner_replay {
+namespace esphome::elsner_remo_replay {
 
 // A dimmer for a light entity (use it as the output of a monochromatic light). The brightness is set the way the
 // Remo pro does it: a press frame, after hold_delay the dim frame (the dimmer dims from now on), and after the time
 // needed for the change the end frame. The level is only an estimate (the dimmer reports nothing): it goes to the
 // bottom or the top (with 10% more time) when 0..5% or 99..100% is asked, which brings it back in line.
-class ReplayDimmer : public output::FloatOutput, public Component, public Parented<ElsnerReplay> {
+class ReplayDimmer : public output::FloatOutput, public Component, public Parented<ElsnerRemoReplay> {
  public:
   // kind: 0 switch_on (press, release), 1 switch_off (press, release), 2 dim_up and 3 dim_down (press, dim, end)
   void add_frame(uint8_t kind, const std::vector<uint8_t> &frame) {
@@ -45,4 +45,4 @@ class ReplayDimmer : public output::FloatOutput, public Component, public Parent
   float pending_{0.0f};
 };
 
-}  // namespace esphome::elsner_replay
+}  // namespace esphome::elsner_remo_replay

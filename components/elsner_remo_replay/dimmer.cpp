@@ -3,9 +3,9 @@
 #include "esphome/core/hal.h"
 #include <cmath>
 
-namespace esphome::elsner_replay {
+namespace esphome::elsner_remo_replay {
 
-static const char *const TAG = "elsner_replay.dimmer";
+static const char *const TAG = "elsner_remo_replay.dimmer";
 static constexpr float MIN_LEVEL = 0.02f;
 
 void ReplayDimmer::write_state(float state) {
@@ -95,4 +95,4 @@ void ReplayDimmer::dump_config() {
   ESP_LOGCONFIG(TAG, "  Hold delay: %u ms", (unsigned) this->hold_ms_);
 }
 
-}  // namespace esphome::elsner_replay
+}  // namespace esphome::elsner_remo_replay

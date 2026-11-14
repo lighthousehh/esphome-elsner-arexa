@@ -2,23 +2,23 @@ import esphome.codegen as cg
 from esphome.components import switch
 import esphome.config_validation as cv
 
-from . import CONF_ELSNER_AREXA_ID, ElsnerArexa, elsner_arexa_ns
+from . import CONF_ELSNER_REMO_ID, ElsnerRemo, elsner_remo_ns
 
-DEPENDENCIES = ["elsner_arexa"]
+DEPENDENCIES = ["elsner_remo"]
 
-ArexaAutoModeSwitch = elsner_arexa_ns.class_("ArexaAutoModeSwitch", switch.Switch)
+RemoAutoModeSwitch = elsner_remo_ns.class_("RemoAutoModeSwitch", switch.Switch)
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(CONF_ELSNER_AREXA_ID): cv.use_id(ElsnerArexa),
+        cv.GenerateID(CONF_ELSNER_REMO_ID): cv.use_id(ElsnerRemo),
         # on: automatic mode, off: manual (the state follows the station)
-        cv.Optional("auto_mode"): switch.switch_schema(ArexaAutoModeSwitch, icon="mdi:refresh-auto"),
+        cv.Optional("auto_mode"): switch.switch_schema(RemoAutoModeSwitch, icon="mdi:refresh-auto"),
     }
 )
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_AREXA_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_ID])
     if "auto_mode" in config:
         s = await switch.new_switch(config["auto_mode"])
         await cg.register_parented(s, hub)

@@ -1,13 +1,13 @@
-#include "elsner_arexa.h"
+#include "elsner_remo.h"
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/application.h"
 #include <algorithm>
 #include <cmath>
 
-namespace esphome::elsner_arexa {
+namespace esphome::elsner_remo {
 
-static const char *const TAG = "elsner_arexa";
+static const char *const TAG = "elsner_remo";
 
 // The frame (38 bytes after the anchor 0x0a): ce ad 93 ba, seed, 31 payload bytes, CRC-16 (poly 0x1021, init 0x68b3).
 // With d[k] = c[k] - 2 c[k-1] (mod 256), every payload byte is d[k] = value[k] + (parity(seed & MASK[k]) ^ INV[k]),
@@ -82,7 +82,7 @@ static uint8_t counter_check_of(const uint8_t *v) { return v[7] + 2 * (v[6] + 2 
 
 // the pairing: pairing[0..8] = the values of bytes 8..16 of the RC's packets: 8, 9 the system ID (repeated in 13, 14), 10 the RC's
 // address, 15 the station's address (the RC's packets go to the station), 11, 12, 16 the device type
-void ElsnerArexa::use_pairing_(const uint8_t *pairing) {
+void ElsnerRemo::use_pairing_(const uint8_t *pairing) {
   for (int i = 0; i < 9; i++)
     this->pairing_[i] = pairing[i];
   this->rc_address_ = pairing[2];
@@ -91,7 +91,7 @@ void ElsnerArexa::use_pairing_(const uint8_t *pairing) {
 }
 
 // 9 bytes (the pairing), or 10 with the counter's check byte (then a command can resync before any packet is heard)
-void ElsnerArexa::set_fixed_pairing(const std::vector<uint8_t> &pairing) {
+void ElsnerRemo::set_fixed_pairing(const std::vector<uint8_t> &pairing) {
   if (pairing.size() != 9 && pairing.size() != 10)
     return;
   this->use_pairing_(pairing.data());
@@ -100,7 +100,7 @@ void ElsnerArexa::set_fixed_pairing(const std::vector<uint8_t> &pairing) {
   this->fixed_ = true;
 }
 
-void ElsnerArexa::setup() {
+void ElsnerRemo::setup() {
   if (this->radio_->is_failed()) {
     this->mark_failed();
     return;
@@ -110,7 +110,7 @@ void ElsnerArexa::setup() {
   // the window's last state survives a reboot
   if (std::isnan(this->outside_lock_))
     this->locked_ = 0;
-  this->window_pref_ = global_preferences->make_preference<int8_t>(fnv1_hash("elsner_arexa_window"));
+  this->window_pref_ = global_preferences->make_preference<int8_t>(fnv1_hash("elsner_remo_window"));
   int8_t window;
   if (this->window_pref_.load(&window) && window >= 0 && window <= 1) {
     this->window_ = window;
@@ -130,7 +130,7 @@ void ElsnerArexa::setup() {
 // phases: the sync word, the first two frame bytes ce ad, fixes the phase. Then 36 bytes: frame bytes 2..37, with
 // the CRC. Measured against raw chips decoded here (sync on the 16 chips of ce): 42% against 29% of the station's
 // packets with a matching CRC (2026-11-04, 4 h alternating).
-void ElsnerArexa::start_listening() {
+void ElsnerRemo::start_listening() {
   auto *r = this->radio_;
   r->set_frequency(this->frequency_);
   r->set_modulation_type(cc1101::Modulation::MODULATION_2_FSK);
@@ -163,7 +163,7 @@ void ElsnerArexa::start_listening() {
 // with wrong bits. The DVGA's 3 highest steps are left out: then the noise brings it to the same level every time.
 // Against no limit, with the gain fixed again every 5 min: 87% against 46% of the station's packets usable, 5
 // against 46 lost (2026-11-08, 6 h alternating; 2 steps: 83%, LNA limits: no better).
-void ElsnerArexa::fix_gain_() {
+void ElsnerRemo::fix_gain_() {
   auto *r = this->radio_;
   r->set_freeze(cc1101::Freeze::FREEZE_DEFAULT);
   r->begin_rx();
@@ -173,12 +173,12 @@ void ElsnerArexa::fix_gain_() {
 }
 
 // Called by the CC1101 driver before it listens again: keep it short (the station answers the RC 14 ms later).
-void ElsnerArexa::on_packet(const std::vector<uint8_t> &packet, float freq_offset, float rssi, uint8_t lqi) {
+void ElsnerRemo::on_packet(const std::vector<uint8_t> &packet, float freq_offset, float rssi, uint8_t lqi) {
   if (this->queue_.size() < 8)
     this->queue_.push_back({packet, rssi, freq_offset});
 }
 
-void ElsnerArexa::loop() {
+void ElsnerRemo::loop() {
   for (auto &item : this->queue_)
     this->decode_(item.bytes, item.rssi, item.freq_offset);
   this->queue_.clear();
@@ -203,7 +203,7 @@ void ElsnerArexa::loop() {
                                                                          : "confirmed");
 }
 
-void ElsnerArexa::decode_(const std::vector<uint8_t> &x, float rssi, float freq_offset) {
+void ElsnerRemo::decode_(const std::vector<uint8_t> &x, float rssi, float freq_offset) {
   // frame bytes 0..37: the sync word ce ad, then what the chip handed over. A packet is used only with a matching
   // CRC (bytes 36, 37 over 0..35): the chip's Manchester decoder does not tell which bytes are broken. One wrong bit
   // is repaired, but such a packet only confirms a send (see below).
@@ -397,7 +397,7 @@ void ElsnerArexa::decode_(const std::vector<uint8_t> &x, float rssi, float freq_
 // The answer to the command being sent carries its counter. The station answers with its state from before the
 // command, so a second send fetches the new mode: a mode command is done when an answer has the new mode, and open,
 // close or stop in automatic mode (which switch the station to manual) send once more after the first answer.
-void ElsnerArexa::check_answer_(const uint8_t *v) {
+void ElsnerRemo::check_answer_(const uint8_t *v) {
   if (this->cmd_ < 0 || counter_of(v) != this->sent_n_ || counter_check_of(v) != this->counter_check_)
     return;
   const bool resync_answer = v[11] == 0x4d && v[12] == 0x01;
@@ -425,7 +425,7 @@ void ElsnerArexa::check_answer_(const uint8_t *v) {
   }
 }
 
-bool ElsnerArexa::send_command(Command cmd) {
+bool ElsnerRemo::send_command(Command cmd) {
   if (this->cmd_ >= 0) {
     std::string result = std::string("replaced by ") + COMMAND_NAMES[cmd];
     this->finish_(result.c_str());
@@ -448,7 +448,7 @@ bool ElsnerArexa::send_command(Command cmd) {
   return true;
 }
 
-void ElsnerArexa::finish_(const char *result) {
+void ElsnerRemo::finish_(const char *result) {
   if (strcmp(result, "confirmed") == 0)
     ESP_LOGI(TAG, "%s: confirmed after %d send%s", COMMAND_NAMES[this->cmd_], this->sends_, this->sends_ == 1 ? "" : "s");
   else
@@ -465,7 +465,7 @@ void ElsnerArexa::finish_(const char *result) {
 
 // A fresh frame: the command with the next counter (the station takes a packet only if its counter is newer than the
 // last one), or a resync request with a new random block.
-void ElsnerArexa::new_send_() {
+void ElsnerRemo::new_send_() {
   const uint8_t seed = random_uint32() & 0xff;
   uint8_t value[36] = {0};
   for (int i = 0; i < 9; i++)
@@ -518,7 +518,7 @@ void ElsnerArexa::new_send_() {
 }
 
 // The station's mode byte: 0xb3 manual, 0xbf automatic
-void ElsnerArexa::publish_mode_(uint8_t mode) {
+void ElsnerRemo::publish_mode_(uint8_t mode) {
   if (mode != 0xb3 && mode != 0xbf)
     return;
   // the station answers a command with its mode from before it: after an open, stop or close it is in manual mode
@@ -538,14 +538,14 @@ void ElsnerArexa::publish_mode_(uint8_t mode) {
 // README: Window state. The station closes the window on a wind or rain alarm (if switched on in the RC's settings),
 // also in manual mode, and ignores the buttons meanwhile. The wind alarm holds 5 minutes after the last gust above
 // the limit; I see the wind only once a minute, so a short gust can close the window unseen.
-bool ElsnerArexa::alarm_() {
+bool ElsnerRemo::alarm_() {
   if (this->windy_ && millis() - this->windy_ms_ >= 5 * 60 * 1000)
     this->windy_ = false;
   return (this->rain_alarm_ && this->raining_) || (!std::isnan(this->wind_limit_) && (this->windy_ || this->wind_flag_));
 }
 
 // A confirmed open, stop or close, from the gateway or the RC. Each one puts the station in manual mode.
-void ElsnerArexa::window_command_(int cmd) {
+void ElsnerRemo::window_command_(int cmd) {
   if (cmd != CMD_OPEN && cmd != CMD_STOP && cmd != CMD_CLOSE)
     return;
   const uint32_t now = millis();
@@ -572,7 +572,7 @@ void ElsnerArexa::window_command_(int cmd) {
 
 // After new values: the alarms, and in automatic mode the RC's settings A (open above the inside temperature, close
 // 2 °C below it) and B (closed below the outside temperature, until 2 °C above it).
-void ElsnerArexa::window_update_() {
+void ElsnerRemo::window_update_() {
   if (this->alarm_()) {
     this->set_window_(0);
     return;
@@ -586,7 +586,7 @@ void ElsnerArexa::window_update_() {
   // else: not known yet (just started, between the two limits), or no temperature control: it stays as it is
 }
 
-void ElsnerArexa::set_window_(int8_t state) {
+void ElsnerRemo::set_window_(int8_t state) {
   if (state == this->window_)
     return;
   ESP_LOGD(TAG, "Window: %s", state ? "open" : "closed");
@@ -603,7 +603,7 @@ void ElsnerArexa::set_window_(int8_t state) {
 }
 
 // For the last frame text sensor: "ok -62 cead93...", "tx cead93..." (see text_sensor.py)
-void ElsnerArexa::publish_frame_(const char *kind, float rssi, const uint8_t *c) {
+void ElsnerRemo::publish_frame_(const char *kind, float rssi, const uint8_t *c) {
 #ifdef USE_TEXT_SENSOR
   if (this->last_frame_ == nullptr)
     return;
@@ -618,7 +618,7 @@ void ElsnerArexa::publish_frame_(const char *kind, float rssi, const uint8_t *c)
 
 // One copy of the frame. The chip sends it: packet mode with its own Manchester. The sync word 00 0a: the zero byte
 // gives 16 alternating chips like the RC's preamble, 0a is the anchor. Then the 38 frame bytes.
-void ElsnerArexa::transmit_() {
+void ElsnerRemo::transmit_() {
   auto *r = this->radio_;
   r->set_manchester(true);
   r->set_sync1(0x00);
@@ -634,8 +634,8 @@ void ElsnerArexa::transmit_() {
   this->copies_++;
 }
 
-void ElsnerArexa::dump_config() {
-  ESP_LOGCONFIG(TAG, "Elsner Arexa:");
+void ElsnerRemo::dump_config() {
+  ESP_LOGCONFIG(TAG, "Elsner Remo:");
   ESP_LOGCONFIG(TAG, "  Frequency: %.3f MHz", this->frequency_ / 1e6f);
   if (this->learned_)
     ESP_LOGCONFIG(TAG, "  Pairing: system ID %02x%02x, RC address %02x, station address %02x (%s)", this->pairing_[0],
@@ -648,4 +648,4 @@ void ElsnerArexa::dump_config() {
   ESP_LOGCONFIG(TAG, "  Travel time: %u ms", (unsigned) this->travel_ms_);
 }
 
-}  // namespace esphome::elsner_arexa
+}  // namespace esphome::elsner_remo

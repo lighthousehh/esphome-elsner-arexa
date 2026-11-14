@@ -14,9 +14,9 @@ from esphome.const import (
     UNIT_METER_PER_SECOND,
 )
 
-from . import CONF_ELSNER_AREXA_ID, ElsnerArexa
+from . import CONF_ELSNER_REMO_ID, ElsnerRemo
 
-DEPENDENCIES = ["elsner_arexa"]
+DEPENDENCIES = ["elsner_remo"]
 
 _raw = sensor.sensor_schema(
     accuracy_decimals=0, state_class=STATE_CLASS_MEASUREMENT, entity_category=ENTITY_CATEGORY_DIAGNOSTIC
@@ -77,12 +77,12 @@ TYPES = {
 }
 
 CONFIG_SCHEMA = cv.Schema(
-    {cv.GenerateID(CONF_ELSNER_AREXA_ID): cv.use_id(ElsnerArexa), **{cv.Optional(k): v for k, v in TYPES.items()}}
+    {cv.GenerateID(CONF_ELSNER_REMO_ID): cv.use_id(ElsnerRemo), **{cv.Optional(k): v for k, v in TYPES.items()}}
 )
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_AREXA_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_ID])
     for key in TYPES:
         if key in config:
             s = await sensor.new_sensor(config[key])

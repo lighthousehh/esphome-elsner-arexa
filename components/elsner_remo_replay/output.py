@@ -3,11 +3,11 @@ from esphome.components import output
 import esphome.config_validation as cv
 from esphome.const import CONF_ID
 
-from . import CONF_ELSNER_REPLAY_ID, ElsnerReplay, elsner_replay_ns
+from . import CONF_ELSNER_REMO_REPLAY_ID, ElsnerRemoReplay, elsner_remo_replay_ns
 
-DEPENDENCIES = ["elsner_replay"]
+DEPENDENCIES = ["elsner_remo_replay"]
 
-ReplayDimmer = elsner_replay_ns.class_("ReplayDimmer", output.FloatOutput, cg.Component)
+ReplayDimmer = elsner_remo_replay_ns.class_("ReplayDimmer", output.FloatOutput, cg.Component)
 
 CONF_DIM_TIME = "dim_time"
 CONF_HOLD_DELAY = "hold_delay"
@@ -34,7 +34,7 @@ def frames(count):
 CONFIG_SCHEMA = output.FLOAT_OUTPUT_SCHEMA.extend(
     {
         cv.Required(CONF_ID): cv.declare_id(ReplayDimmer),
-        cv.GenerateID(CONF_ELSNER_REPLAY_ID): cv.use_id(ElsnerReplay),
+        cv.GenerateID(CONF_ELSNER_REMO_REPLAY_ID): cv.use_id(ElsnerRemoReplay),
         # the time the dimmer needs from the darkest to the brightest, from the start of the dimming (after hold_delay)
         cv.Optional(CONF_DIM_TIME, default="4s"): cv.positive_time_period_milliseconds,
         # the time between the press frame and the dim frame (the Remo pro sends it after about 1 s)
@@ -49,7 +49,7 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await output.register_output(var, config)
-    hub = await cg.get_variable(config[CONF_ELSNER_REPLAY_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_REPLAY_ID])
     await cg.register_parented(var, hub)
     cg.add(var.set_dim_time(config[CONF_DIM_TIME]))
     cg.add(var.set_hold_delay(config[CONF_HOLD_DELAY]))

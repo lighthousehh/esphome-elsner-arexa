@@ -18,14 +18,14 @@ ota:
 
 external_components:
   - source: github://dbuezas/esphome-elsner-arexa
-    components: [elsner_arexa]
+    components: [elsner_remo]
 
 spi:
   clk_pin: D5
   miso_pin: D6
   mosi_pin: D7
 
-# packet mode needs gdo0_pin and packet_length (any value); elsner_arexa sets all the radio settings itself
+# packet mode needs gdo0_pin and packet_length (any value); elsner_remo sets all the radio settings itself
 cc1101:
   - id: radio_arexa
     cs_pin: D8
@@ -33,7 +33,7 @@ cc1101:
     packet_mode: true
     packet_length: 64
 
-elsner_arexa:
+elsner_remo:
   cc1101_id: radio_arexa
   # frequency: 868.19MHz  # 868.19 MHz + your module's error (cheap modules: +-40 kHz)
   # pairing: auto         # or the 20 hex digits of the "Arexa Pairing" text sensor, to skip the learning
@@ -47,7 +47,7 @@ elsner_arexa:
   travel_time: 40s
 
 sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     inside_temperature:
       name: Arexa Inside Temperature
     outside_temperature:
@@ -68,7 +68,7 @@ sensor:
       name: Arexa Station Frequency Offset
 
 binary_sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     rain:
       name: Arexa Rain
     wind_alarm:
@@ -77,12 +77,12 @@ binary_sensor:
       name: Arexa Auto Mode
 
 switch:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     auto_mode:
       name: Arexa Automatic
 
 button:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     open:
       name: Arexa Open
     stop:
@@ -95,12 +95,12 @@ button:
       name: Arexa Manual
 
 event:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     remote:
       name: Arexa Remote
 
 text_sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     pairing:
       name: Arexa Pairing
     station_raw:

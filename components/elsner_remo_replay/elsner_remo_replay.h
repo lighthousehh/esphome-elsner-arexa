@@ -6,18 +6,18 @@
 #ifdef USE_BUTTON
 #include "esphome/components/button/button.h"
 #endif
-#include "esphome/components/elsner_arexa/elsner_arexa.h"
+#include "esphome/components/elsner_remo/elsner_remo.h"
 #include <vector>
 
-namespace esphome::elsner_replay {
+namespace esphome::elsner_remo_replay {
 
-// Sends whole frames (38 bytes with the CRC, as the 'Letzter Rahmen' text sensor of elsner_arexa shows them) that
-// were recorded from a Remo pro. It uses the radio setup of elsner_arexa and puts the radio back into receive mode
+// Sends whole frames (38 bytes with the CRC, as the 'Letzter Rahmen' text sensor of elsner_remo shows them) that
+// were recorded from a Remo pro. It uses the radio setup of elsner_remo and puts the radio back into receive mode
 // after each frame.
-class ElsnerReplay : public Component {
+class ElsnerRemoReplay : public Component {
  public:
   void set_radio(cc1101::CC1101Component *radio) { this->radio_ = radio; }
-  void set_arexa(elsner_arexa::ElsnerArexa *arexa) { this->arexa_ = arexa; }
+  void set_remo(elsner_remo::ElsnerRemo *remo) { this->remo_ = remo; }
   void set_output_power(float power) { this->output_power_ = power; }
 
   void loop() override;
@@ -34,13 +34,13 @@ class ElsnerReplay : public Component {
   void transmit_(const std::vector<uint8_t> &frame);
 
   cc1101::CC1101Component *radio_{nullptr};
-  elsner_arexa::ElsnerArexa *arexa_{nullptr};
+  elsner_remo::ElsnerRemo *remo_{nullptr};
   float output_power_{11.0f};
   std::vector<Pending> queue_;
 };
 
 #ifdef USE_BUTTON
-class ReplayButton : public button::Button, public Parented<ElsnerReplay> {
+class ReplayButton : public button::Button, public Parented<ElsnerRemoReplay> {
  public:
   void add_frame(const std::vector<uint8_t> &frame) { this->frames_.push_back(frame); }
   void set_gap(uint32_t gap_ms) { this->gap_ms_ = gap_ms; }
@@ -54,4 +54,4 @@ class ReplayButton : public button::Button, public Parented<ElsnerReplay> {
 };
 #endif
 
-}  // namespace esphome::elsner_replay
+}  // namespace esphome::elsner_remo_replay
