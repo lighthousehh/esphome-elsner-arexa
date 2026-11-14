@@ -1,12 +1,12 @@
-#include "elsner_replay.h"
+#include "elsner_remo_replay.h"
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 
-namespace esphome::elsner_replay {
+namespace esphome::elsner_remo_replay {
 
-static const char *const TAG = "elsner_replay";
+static const char *const TAG = "elsner_remo_replay";
 
-void ElsnerReplay::send(const std::vector<std::vector<uint8_t>> &frames, uint32_t gap_ms, uint8_t copies) {
+void ElsnerRemoReplay::send(const std::vector<std::vector<uint8_t>> &frames, uint32_t gap_ms, uint8_t copies) {
   const uint32_t now = millis();
   for (size_t i = 0; i < frames.size(); i++)
     for (uint8_t c = 0; c < copies; c++)
@@ -14,7 +14,7 @@ void ElsnerReplay::send(const std::vector<std::vector<uint8_t>> &frames, uint32_
   ESP_LOGI(TAG, "Queued %u frame(s), %u copies each", (unsigned) frames.size(), (unsigned) copies);
 }
 
-void ElsnerReplay::loop() {
+void ElsnerRemoReplay::loop() {
   if (this->queue_.empty())
     return;
   const uint32_t now = millis();
@@ -28,9 +28,9 @@ void ElsnerReplay::loop() {
   }
 }
 
-// The same way elsner_arexa sends: the chip does the Manchester coding; sync word 00 0a (the zero byte gives 16
+// The same way elsner_remo sends: the chip does the Manchester coding; sync word 00 0a (the zero byte gives 16
 // alternating chips like the RC's preamble, 0a is the anchor), then the 38 frame bytes.
-void ElsnerReplay::transmit_(const std::vector<uint8_t> &frame) {
+void ElsnerRemoReplay::transmit_(const std::vector<uint8_t> &frame) {
   if (this->radio_ == nullptr || this->radio_->is_failed() || frame.size() != 38)
     return;
   auto *r = this->radio_;
@@ -45,13 +45,13 @@ void ElsnerReplay::transmit_(const std::vector<uint8_t> &frame) {
   const auto err = r->transmit_packet(frame);
   if (err != cc1101::CC1101Error::NONE)
     ESP_LOGW(TAG, "transmit_packet failed: %d", (int) err);
-  if (this->arexa_ != nullptr)
-    this->arexa_->start_listening();
+  if (this->remo_ != nullptr)
+    this->remo_->start_listening();
 }
 
-void ElsnerReplay::dump_config() {
+void ElsnerRemoReplay::dump_config() {
   ESP_LOGCONFIG(TAG, "Elsner Replay:");
   ESP_LOGCONFIG(TAG, "  Output power: %.1f dBm", this->output_power_);
 }
 
-}  // namespace esphome::elsner_replay
+}  // namespace esphome::elsner_remo_replay

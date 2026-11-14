@@ -2,11 +2,11 @@ import esphome.codegen as cg
 from esphome.components import button
 import esphome.config_validation as cv
 
-from . import CONF_ELSNER_REPLAY_ID, ElsnerReplay, elsner_replay_ns
+from . import CONF_ELSNER_REMO_REPLAY_ID, ElsnerRemoReplay, elsner_remo_replay_ns
 
-DEPENDENCIES = ["elsner_replay"]
+DEPENDENCIES = ["elsner_remo_replay"]
 
-ReplayButton = elsner_replay_ns.class_("ReplayButton", button.Button)
+ReplayButton = elsner_remo_replay_ns.class_("ReplayButton", button.Button)
 
 CONF_FRAMES = "frames"
 CONF_GAP = "gap"
@@ -25,7 +25,7 @@ def frame(value):
 
 CONFIG_SCHEMA = button.button_schema(ReplayButton).extend(
     {
-        cv.GenerateID(CONF_ELSNER_REPLAY_ID): cv.use_id(ElsnerReplay),
+        cv.GenerateID(CONF_ELSNER_REMO_REPLAY_ID): cv.use_id(ElsnerRemoReplay),
         # the frames are sent one after the other, each one `gap` after the one before
         cv.Required(CONF_FRAMES): cv.ensure_list(frame),
         cv.Optional(CONF_GAP, default="100ms"): cv.positive_time_period_milliseconds,
@@ -36,7 +36,7 @@ CONFIG_SCHEMA = button.button_schema(ReplayButton).extend(
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_REPLAY_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_REPLAY_ID])
     b = await button.new_button(config)
     await cg.register_parented(b, hub)
     for f in config[CONF_FRAMES]:

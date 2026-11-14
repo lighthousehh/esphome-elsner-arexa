@@ -3,9 +3,9 @@ from esphome.components import binary_sensor
 import esphome.config_validation as cv
 from esphome.const import DEVICE_CLASS_MOISTURE, DEVICE_CLASS_PROBLEM
 
-from . import CONF_ELSNER_AREXA_ID, ElsnerArexa
+from . import CONF_ELSNER_REMO_ID, ElsnerRemo
 
-DEPENDENCIES = ["elsner_arexa"]
+DEPENDENCIES = ["elsner_remo"]
 
 TYPES = {
     # the station's rain alarm (it holds ~25 minutes after the sensor is dry)
@@ -16,12 +16,12 @@ TYPES = {
 }
 
 CONFIG_SCHEMA = cv.Schema(
-    {cv.GenerateID(CONF_ELSNER_AREXA_ID): cv.use_id(ElsnerArexa), **{cv.Optional(k): v for k, v in TYPES.items()}}
+    {cv.GenerateID(CONF_ELSNER_REMO_ID): cv.use_id(ElsnerRemo), **{cv.Optional(k): v for k, v in TYPES.items()}}
 )
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_AREXA_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_ID])
     for key in TYPES:
         if key in config:
             s = await binary_sensor.new_binary_sensor(config[key])

@@ -25,15 +25,15 @@
 #include <cmath>
 #include <vector>
 
-namespace esphome::elsner_arexa {
+namespace esphome::elsner_remo {
 
-// the same order in COMMANDS and COMMAND_NAMES (elsner_arexa.cpp), TYPES (button.py) and EVENT_TYPES (event.py)
+// the same order in COMMANDS and COMMAND_NAMES (elsner_remo.cpp), TYPES (button.py) and EVENT_TYPES (event.py)
 enum Command : uint8_t { CMD_OPEN = 0, CMD_STOP, CMD_CLOSE, CMD_AUTO, CMD_MANUAL };
 
 // Elsner Arexa window control (RC handset + weather station) on a CC1101 in packet mode.
 // Listens to the RC and the station, learns the pairing (system ID, both addresses) from the RC's own packets and the
 // packet counter from both, and sends RC commands built from them. See the README for the radio format.
-class ElsnerArexa : public Component, public cc1101::CC1101Listener {
+class ElsnerRemo : public Component, public cc1101::CC1101Listener {
  public:
   void set_radio(cc1101::CC1101Component *radio) { this->radio_ = radio; }
   void set_frequency(float frequency) { this->frequency_ = frequency; }
@@ -202,7 +202,7 @@ class ElsnerArexa : public Component, public cc1101::CC1101Listener {
 };
 
 #ifdef USE_BUTTON
-class ArexaButton : public button::Button, public Parented<ElsnerArexa> {
+class RemoButton : public button::Button, public Parented<ElsnerRemo> {
  public:
   void set_command(uint8_t cmd) { this->cmd_ = static_cast<Command>(cmd); }
 
@@ -215,10 +215,10 @@ class ArexaButton : public button::Button, public Parented<ElsnerArexa> {
 #ifdef USE_SWITCH
 // on: automatic mode, off: manual. Its state is the station's (byte 25): the station answers the second mode send
 // with the new mode within a second.
-class ArexaAutoModeSwitch : public switch_::Switch, public Parented<ElsnerArexa> {
+class RemoAutoModeSwitch : public switch_::Switch, public Parented<ElsnerRemo> {
  protected:
   void write_state(bool state) override { this->parent_->send_command(state ? CMD_AUTO : CMD_MANUAL); }
 };
 #endif
 
-}  // namespace esphome::elsner_arexa
+}  // namespace esphome::elsner_remo

@@ -3,17 +3,17 @@ from esphome.components import event
 import esphome.config_validation as cv
 from esphome.const import DEVICE_CLASS_BUTTON
 
-from . import CONF_ELSNER_AREXA_ID, ElsnerArexa
+from . import CONF_ELSNER_REMO_ID, ElsnerRemo
 
-DEPENDENCIES = ["elsner_arexa"]
+DEPENDENCIES = ["elsner_remo"]
 
 CONF_REMOTE = "remote"
-# in the order of the Command enum (elsner_arexa.h)
+# in the order of the Command enum (elsner_remo.h)
 EVENT_TYPES = ["open", "stop", "close", "auto", "manual"]
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(CONF_ELSNER_AREXA_ID): cv.use_id(ElsnerArexa),
+        cv.GenerateID(CONF_ELSNER_REMO_ID): cv.use_id(ElsnerRemo),
         # a press on the real RC (its repeats, with the same counter, count as one press)
         cv.Optional(CONF_REMOTE): event.event_schema(device_class=DEVICE_CLASS_BUTTON, icon="mdi:remote"),
     }
@@ -21,7 +21,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
-    hub = await cg.get_variable(config[CONF_ELSNER_AREXA_ID])
+    hub = await cg.get_variable(config[CONF_ELSNER_REMO_ID])
     if CONF_REMOTE in config:
         e = await event.new_event(config[CONF_REMOTE], event_types=EVENT_TYPES)
         cg.add(hub.set_remote_event(e))

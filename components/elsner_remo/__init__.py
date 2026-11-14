@@ -8,7 +8,7 @@ DEPENDENCIES = ["cc1101"]
 MULTI_CONF = True
 
 CONF_CC1101_ID = "cc1101_id"
-CONF_ELSNER_AREXA_ID = "elsner_arexa_id"
+CONF_ELSNER_REMO_ID = "elsner_remo_id"
 CONF_PAIRING = "pairing"
 CONF_SETTINGS = "settings"
 CONF_OPEN_ABOVE = "open_above"
@@ -17,8 +17,8 @@ CONF_WIND_ALARM = "wind_alarm"
 CONF_RAIN_ALARM = "rain_alarm"
 CONF_TRAVEL_TIME = "travel_time"
 
-elsner_arexa_ns = cg.esphome_ns.namespace("elsner_arexa")
-ElsnerArexa = elsner_arexa_ns.class_("ElsnerArexa", cg.Component)
+elsner_remo_ns = cg.esphome_ns.namespace("elsner_remo")
+ElsnerRemo = elsner_remo_ns.class_("ElsnerRemo", cg.Component)
 
 
 def validate_pairing(value):
@@ -69,7 +69,7 @@ SETTINGS_SCHEMA = cv.Schema(
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(): cv.declare_id(ElsnerArexa),
+        cv.GenerateID(): cv.declare_id(ElsnerRemo),
         cv.Required(CONF_CC1101_ID): cv.use_id(cc1101.CC1101Component),
         # The Arexa sends at about 868.19 MHz. Cheap CC1101 modules can be off by +-40 kHz: set this to
         # 868.19 MHz + your module's error (mine needs 868.227 MHz).

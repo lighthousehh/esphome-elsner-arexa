@@ -20,8 +20,8 @@ ota:
   - platform: esphome
 
 external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@remo-light-test
-    components: [elsner_arexa, elsner_replay]
+  - source: github://lighthousehh/esphome-elsner-arexa@rename-elsner-remo
+    components: [elsner_remo, elsner_remo_replay]
 
 spi:
   clk_pin: GPIO18
@@ -35,19 +35,19 @@ cc1101:
     packet_mode: true
     packet_length: 64
 
-elsner_arexa:
-  id: arexa
+elsner_remo:
+  id: remo
   cc1101_id: radio_arexa
   # frequency: 868.19MHz  # 868,19 MHz + Abweichung Ihres Moduls (billige Module: +-40 kHz)
 
-elsner_replay:
+elsner_remo_replay:
   id: replay
   cc1101_id: radio_arexa
-  elsner_arexa_id: arexa
+  elsner_remo_id: remo
 
 # --- Licht (Kanal 1 der Remo pro) ---
 output:
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: dimmer_out
     dim_time: 4s
     hold_delay: 1000ms
@@ -81,21 +81,21 @@ globals:
     initial_value: '0'   # 1 = auf, -1 = ab
 
 button:
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: markise_auf_kurz
     name: Markise Auf kurz
     gap: 70ms
     frames:
       - cead93baecd4b08f44515c9a2f84d15dc107b9193a75c3870e1c376fddba74e8d1a24488cd6f
       - cead93bad7a85fee03d05b992e83cf58b7f372cb9f3f2e5cb972e4c99223468d1b366cd859b3
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: markise_ab_kurz
     name: Markise Ab kurz
     gap: 70ms
     frames:
       - cead93ba43810f4ec3505b992d80ca4ea3ca502450a0c78e1b356ad4a74e9d3a74e8d0a1ef81
       - cead93ba75e2d7dee390db992d80c94c9fc3220818304c972e5cb76fdebc77edd9b366cc69f7
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: markise_auf_fahren
     name: Markise Auf fahren
     gap: 1000ms
@@ -103,7 +103,7 @@ button:
       - cead93baecd4b08f44515c9a2f84d15dc107b9193a75c3870e1c376fddba74e8d1a24488cd6f
       - cead93ba75e2d7dee390db992d80c94c9fc3360818304c972e5cb76fdebc77edd9b366cc6baf
       - cead93bad99d67fe2310db992e83cf58b6f172c08810d4a84f9e3b76ecd9b264c88f1f3dbe8d
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: markise_ab_fahren
     name: Markise Ab fahren
     gap: 1000ms
@@ -115,7 +115,7 @@ button:
     name: Empfang neu starten
     on_press:
       - lambda: |-
-          id(arexa).start_listening();
+          id(remo).start_listening();
           ESP_LOGI("test", "Empfang neu gestartet");
 
 cover:
@@ -145,12 +145,12 @@ cover:
                   - button.press: markise_auf_kurz
 
 sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     rc_rssi:
       name: Funk Pegel RC
 
 text_sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     pairing:
       name: Pairing
     last_frame:

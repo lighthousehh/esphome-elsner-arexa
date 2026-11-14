@@ -23,8 +23,8 @@ ota:
   - platform: esphome
 
 external_components:
-  - source: github://lighthousehh/esphome-elsner-arexa@remo-light-test
-    components: [elsner_arexa, elsner_replay]
+  - source: github://lighthousehh/esphome-elsner-arexa@rename-elsner-remo
+    components: [elsner_remo, elsner_remo_replay]
 
 spi:
   clk_pin: GPIO18
@@ -38,18 +38,18 @@ cc1101:
     packet_mode: true
     packet_length: 64
 
-elsner_arexa:
-  id: arexa
+elsner_remo:
+  id: remo
   cc1101_id: radio_arexa
   # frequency: 868.19MHz  # 868.19 MHz + your module's error (cheap modules: +-40 kHz)
 
-elsner_replay:
+elsner_remo_replay:
   id: replay
   cc1101_id: radio_arexa
-  elsner_arexa_id: arexa
+  elsner_remo_id: remo
 
 output:
-  - platform: elsner_replay
+  - platform: elsner_remo_replay
     id: dimmer_out
     dim_time: 4s
     hold_delay: 1000ms
@@ -77,11 +77,11 @@ light:
     restore_mode: ALWAYS_OFF
 
 sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     rc_rssi:
       name: Funk Pegel RC
 
 text_sensor:
-  - platform: elsner_arexa
+  - platform: elsner_remo
     last_frame:
       name: Letzter Rahmen
