@@ -3,7 +3,9 @@
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
 #include "esphome/components/cc1101/cc1101.h"
+#ifdef USE_BUTTON
 #include "esphome/components/button/button.h"
+#endif
 #include "esphome/components/elsner_arexa/elsner_arexa.h"
 #include <vector>
 
@@ -37,6 +39,7 @@ class ElsnerReplay : public Component {
   std::vector<Pending> queue_;
 };
 
+#ifdef USE_BUTTON
 class ReplayButton : public button::Button, public Parented<ElsnerReplay> {
  public:
   void add_frame(const std::vector<uint8_t> &frame) { this->frames_.push_back(frame); }
@@ -49,5 +52,6 @@ class ReplayButton : public button::Button, public Parented<ElsnerReplay> {
   uint32_t gap_ms_{100};
   uint8_t copies_{3};
 };
+#endif
 
 }  // namespace esphome::elsner_replay
